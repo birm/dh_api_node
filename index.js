@@ -16,6 +16,7 @@ var pub = fs.readFileSync('./cert.pub').toString('base64');;
 // TODO this needs to know how to reach a deployment hub
 // TODO it needs to declare its key to the hub, which means it nedds pw
 // we need to know out node id, as assigned by central
+var NODE_ID;
 
 function validate_user(key){
   var promise = new Promise(function(resolve, reject){
@@ -63,6 +64,8 @@ app.route("/:service")
       var body = req.body;
       delete body['api_key'];
       body['user_id'] = user_id;
+      body['node_id'] = NODE_ID;
+      body['signature'] = sign_body(body);
       sa.get(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
         .send(body);
         .end(function(sa_err, sa_res){
@@ -81,6 +84,8 @@ app.route("/:service")
       var body = req.body;
       delete body['api_key'];
       body['user_id'] = user_id;
+      body['node_id'] = NODE_ID;
+      body['signature'] = sign_body(body);
       sa.post(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
         .send(body);
         .end(function(sa_err, sa_res){
@@ -99,6 +104,8 @@ app.route("/:service")
       var body = req.body;
       delete body['api_key'];
       body['user_id'] = user_id;
+      body['node_id'] = NODE_ID;
+      body['signature'] = sign_body(body);
       sa.put(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
         .send(body);
         .end(function(sa_err, sa_res){
