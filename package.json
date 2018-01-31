@@ -1,0 +1,23 @@
+{
+  "name": "dh_api_node",
+  "version": "1.0.0",
+  "description": "Security and API proxy node",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/birm/dh_api_node.git"
+  },
+  "author": "birm@rbirm.us",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/birm/dh_api_node/issues"
+  },
+  "homepage": "https://github.com/birm/dh_api_node#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2"
+  }
+}
