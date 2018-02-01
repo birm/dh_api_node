@@ -1,3 +1,4 @@
+FROM ubuntu:14.04
 ARG mongo_host
 ARG hub_url
 ARG hub_pw
