@@ -288,3 +288,5 @@ app.post("/user/new", function(req,res){
 app.post("/user/login", function(req,res){
     login_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(401)));
 })
+
+app.listen(8081);
