@@ -55,22 +55,28 @@ function validate(pub, node_id, body, signature){
 }
 
 function find_service_host(service){
-
+  TODO
 }
 
-app.route("/:service")
+app.route("/api/:service")
+  // see bwlow, I has a lot of needless trouble signing get requests
+  // NOTE key verification for get is done with headers
+  // keyId contains the node id per the hub
+  // signature contains the signature of the url
+  // userid contains the verified user id
+  // use of these are technically optional, but recommended
+  // NOTE that get signatures are of user id ONLY
+  // NOTE that this only happens for get, put and post contain it in the body
   .get(function (req, res){
     forward_get = function(user_id){
       var body = req.body;
       delete body['api_key'];
-      body['user_id'] = user_id;
-      body['node_id'] = NODE_ID;
-      body['signature'] = sign_body(body);
-      sa.get(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
+      sa.get(find_service_host(req.params.service) +"/" req.originalUrl.splice(3).join("/"))
+        .set({'userid': user_id, 'keyId': NODE_ID ,'Signature': sign_body(user_id);
         .send(body);
         .end(function(sa_err, sa_res){
           if (sa_err){
-            res.sendStatus(500)
+            res.sendStatus(500);
           } else {
             res.json(sa_res);
           }
@@ -86,7 +92,7 @@ app.route("/:service")
       body['user_id'] = user_id;
       body['node_id'] = NODE_ID;
       body['signature'] = sign_body(body);
-      sa.post(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
+      sa.post(find_service_host(req.params.service) +"/" req.originalUrl.splice(33).join("/"))
         .send(body);
         .end(function(sa_err, sa_res){
           if (sa_err){
@@ -106,7 +112,7 @@ app.route("/:service")
       body['user_id'] = user_id;
       body['node_id'] = NODE_ID;
       body['signature'] = sign_body(body);
-      sa.put(find_service_host(req.params.service) +"/" req.originalUrl.splice(2).join("/"))
+      sa.put(find_service_host(req.params.service) +"/" req.originalUrl.splice(3).join("/"))
         .send(body);
         .end(function(sa_err, sa_res){
           if (sa_err){
