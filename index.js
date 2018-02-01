@@ -184,7 +184,8 @@ function new_user(name, auth) {
                 if (err) {
                     reject();
                 }
-                db.collection("users").insertOne({
+                dbo.db("dh_auth");
+                dbo.collection("users").insertOne({
                     username: name,
                     auth: auth
                 }, function(err, result) {
@@ -214,7 +215,8 @@ function login_user(name, auth) {
                 if (err) {
                     reject();
                 }
-                db.collection("users").findOne({
+                dbo.db("dh_auth");
+                dbo.collection("users").findOne({
                     username: name
                 }, function(err, result) {
                     if (err) {
@@ -227,7 +229,7 @@ function login_user(name, auth) {
                         } else {
                             // if not, give a new key
                             let api_key = crypto.randomBytes(20).toString('hex');
-                            db.collection("users").updateOne({
+                            dbo.collection("users").updateOne({
                                 username: name
                             }, {
                                 api_key: api_key,
@@ -259,7 +261,8 @@ function validate_user(key) {
                 if (err) {
                     reject();
                 }
-                db.collection("users").findOne({
+                dbo.db("dh_auth");
+                dbo.collection("users").findOne({
                     api_key: key
                 }, function(err, result) {
                     if (err) {
