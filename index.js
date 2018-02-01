@@ -17,29 +17,14 @@ var pri = fs.readFileSync('./cert.pem').toString('base64');;
 var pub = fs.readFileSync('./cert.pub').toString('base64');;
 
 
-if (process.argv.length < 4) {
-    console.log("Usage: " + __filename + " NODE_ID HUB_URL");
+if (process.argv.length < 5) {
+    console.log("Usage: " + __filename + " NODE_ID HUB_URL MONGO_URL");
     process.exit(-1);
 } else {
     var NODE_ID = process.argv[2];
     var HUB_URL = process.argv[3];
+    var MONGO_URL = process.argv[4];
 }
-
-// get auth db url from hub
-var MONGO_URL;
-sa.get(HUB_URL + "/get/variables/one/auth_db_url").end(function(sa_err, sa_res) {
-    if (sa_err) {
-        console.error("Unable to Get Auth DB Location from Hub")
-        process.exit(-1);
-    }
-    var res = JSON.parse(sa_res)
-    if (res) {
-        MONGO_URL = res;
-    } else {
-        console.error("Unable to Get Auth DB Location from Hub")
-        process.exit(-1);
-    }
-})
 
 // take in body without sign
 function sign_req(body, url) {

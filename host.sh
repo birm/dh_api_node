@@ -13,4 +13,4 @@ curl -X POST "$hub_url/post/variable" --data "{admin_password: $hub_pw, variable
 NODE_ID=$(curl -X POST "$hub_url/post/auth" --data "{admin_password: $hub_pw, pubkey = $pubkey}")
 
 
-nodejs index.js $NODE_ID $hub_pw
+nodejs index.js $NODE_ID $hub_pw $mongo_host
