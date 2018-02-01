@@ -12,5 +12,8 @@ curl -X POST "$hub_url/post/variable" --data "{admin_password: $hub_pw, variable
 # host app
 NODE_ID=$(curl -X POST "$hub_url/post/auth" --data "{admin_password: $hub_pw, pubkey = $pubkey}")
 
+mongo --host $mongo_host dh_auth --eval 'db.createCollection("users")'
+mongo --host $mongo_host dh_auth --eval 'db.users.createIndex( { "username": 1 }, { unique: true } )'
+
 
 nodejs index.js $NODE_ID $hub_pw $mongo_host
