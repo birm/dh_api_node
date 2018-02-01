@@ -16,6 +16,7 @@ app.use(bodyParser.json());
 var pri = fs.readFileSync('./cert.pem').toString('base64');;
 var pub = fs.readFileSync('./cert.pub').toString('base64');;
 
+
 if (process.argv.length < 4) {
     console.log("Usage: " + __filename + " NODE_ID HUB_URL");
     process.exit(-1);
@@ -28,13 +29,15 @@ if (process.argv.length < 4) {
 var MONGO_URL;
 sa.get(HUB_URL + "/get/variables/one/auth_db_url").end(function(sa_err, sa_res) {
     if (sa_err) {
-        key_rej();
+        console.error("Unable to Get Auth DB Location from Hub")
+        process.exit(-1);
     }
     var res = JSON.parse(sa_res)
     if (res) {
         MONGO_URL = res;
     } else {
-        key_rej();
+        console.error("Unable to Get Auth DB Location from Hub")
+        process.exit(-1);
     }
 })
 
@@ -288,4 +291,4 @@ app.post("/user/login", function(req,res){
     login_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(401)));
 })
 
-app.listen(8081);
+app.listen(8081, () => console.log('Listening'));
