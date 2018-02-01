@@ -53,10 +53,14 @@ function sign_body(body) {
 function validate_origin(req) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
+    // if we're signing user_id (get)
+    if (req.header("userid")){
+      body = req.header("userid")
+    }
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
             var ver = crypto.createVerify('RSA-SHA256');
-            ver.update(JSON.stringify(req.body))
+            ver.update(JSON.stringify(body))
             if (ver.verify(pub, signature, 'base64')) {
                 resolve(body)
             } else {
