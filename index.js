@@ -47,7 +47,6 @@ function sign_body(body) {
 
 // this won't live here, but, for symmetry
 // take in request, validate body using headers
-// will need a way to get pub from hub
 function validate_origin(req) {
     var node_id = req.header("keyId");
     var node_id = req.header("Signature");
