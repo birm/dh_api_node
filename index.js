@@ -13,10 +13,13 @@ app.use(bodyParser.json());
 var pri = fs.readFileSync('./cert.pem').toString('base64');;
 var pub = fs.readFileSync('./cert.pub').toString('base64');;
 
-// TODO this needs to know how to reach a deployment hub
-// TODO it needs to declare its key to the hub, which means it nedds pw
-// we need to know out node id, as assigned by central
-var NODE_ID;
+if (process.argv.length < 4) {
+    console.log("Usage: " + __filename + " NODE_ID HUB_URL");
+    process.exit(-1);
+} else {
+  var NODE_ID = argv[2];
+  var HUB_URL = argv[3];
+}
 
 function validate_user(key){
   var promise = new Promise(function(resolve, reject){
@@ -55,11 +58,24 @@ function validate(pub, node_id, body, signature){
 }
 
 function find_service_host(service){
-  TODO
+  return new Promise(function(resolve, reject){
+    sa.get(HUB_URL + "/get/services/one/" + service).end(function(sa_err, sa_res){
+      if (sa_err){
+        reject();
+      }
+      var res = JSON.parse(sa_res)
+      if (res.length){
+        // pick and resolve a random element
+        resolve(res[Math.floor(Math.random() * (res.length))]);
+      } else {
+        reject();
+      }
+    })
+  })
 }
 
 app.route("/api/:service")
-  // see bwlow, I has a lot of needless trouble signing get requests
+  // see notes below, I has a lot of needless trouble signing get requests
   // NOTE key verification for get is done with headers
   // keyId contains the node id per the hub
   // signature contains the signature of the url
@@ -68,61 +84,68 @@ app.route("/api/:service")
   // NOTE that get signatures are of user id ONLY
   // NOTE that this only happens for get, put and post contain it in the body
   .get(function (req, res){
-    forward_get = function(user_id){
-      var body = req.body;
-      delete body['api_key'];
-      sa.get(find_service_host(req.params.service) +"/" req.originalUrl.splice(3).join("/"))
-        .set({'userid': user_id, 'keyId': NODE_ID ,'Signature': sign_body(user_id);
-        .send(body);
-        .end(function(sa_err, sa_res){
-          if (sa_err){
-            res.sendStatus(500);
-          } else {
-            res.json(sa_res);
-          }
-        })
+    var resolve_get = function(service_path){
+      forward_get = function(user_id){
+        var body = req.body;
+        delete body['api_key'];
+        sa.get(service_path +"/" + req.originalUrl.splice(3).join("/"))
+          .set({'userid': user_id, 'keyId': NODE_ID ,'Signature': sign_body(user_id)})
+          .send(body)
+          .end(function(sa_err, sa_res){
+            if (sa_err){
+              res.sendStatus(500);
+            } else {
+              res.json(sa_res);
+            }
+          })
+      }
+      validate_user(req.body.api_key).then(forward_get).catch(res.sendStatus(401));
     }
-    validate_user(req.body.api_key).then(forward_get).catch(res.sendStatus(401));
+    find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
   })
   .post(function (req, res){
-    req.originalUrl
-    forward_get = function(user_id){
-      var body = req.body;
-      delete body['api_key'];
-      body['user_id'] = user_id;
-      body['node_id'] = NODE_ID;
-      body['signature'] = sign_body(body);
-      sa.post(find_service_host(req.params.service) +"/" req.originalUrl.splice(33).join("/"))
-        .send(body);
-        .end(function(sa_err, sa_res){
-          if (sa_err){
-            res.sendStatus(500)
-          } else {
-            res.json(sa_res);
-          }
-        })
-    }
-    validate_user(req.body.api_key).then(forward_get).catch(res.sendStatus(401));
+    var resolve_post = function(service_path){
+      forward_post = function(user_id){
+        var body = req.body;
+        delete body['api_key'];
+        body['user_id'] = user_id;
+        body['node_id'] = NODE_ID;
+        body['signature'] = sign_body(body);
+        sa.post(service_path +"/" + req.originalUrl.splice(33).join("/"))
+          .send(body)
+          .end(function(sa_err, sa_res){
+            if (sa_err){
+              res.sendStatus(500)
+            } else {
+              res.json(sa_res);
+            }
+          })
+      }
+      validate_user(req.body.api_key).then(forward_post).catch(res.sendStatus(401));
+      }
+    find_service_host(req.params.service).then(resolve_post).catch(res.sendStatus(401));
   })
   .put(function (req, res){
-    req.originalUrl
-    forward_get = function(user_id){
-      var body = req.body;
-      delete body['api_key'];
-      body['user_id'] = user_id;
-      body['node_id'] = NODE_ID;
-      body['signature'] = sign_body(body);
-      sa.put(find_service_host(req.params.service) +"/" req.originalUrl.splice(3).join("/"))
-        .send(body);
-        .end(function(sa_err, sa_res){
-          if (sa_err){
-            res.sendStatus(500)
-          } else {
-            res.json(sa_res);
-          }
-        })
-    }
-    validate_user(req.body.api_key).then(forward_get).catch(res.sendStatus(401));
+    var resolve_put = function(service_path){
+      forward_put = function(user_id){
+        var body = req.body;
+        delete body['api_key'];
+        body['user_id'] = user_id;
+        body['node_id'] = NODE_ID;
+        body['signature'] = sign_body(body);
+        sa.put(service_path +"/" + req.originalUrl.splice(33).join("/"))
+          .send(body)
+          .end(function(sa_err, sa_res){
+            if (sa_err){
+              res.sendStatus(500)
+            } else {
+              res.json(sa_res);
+            }
+          })
+      }
+      validate_user(req.body.api_key).then(forward_put).catch(res.sendStatus(401));
+      }
+    find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
   })
 
 // add user
