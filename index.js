@@ -13,15 +13,15 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(bodyParser.json());
 
-var pri = fs.readFileSync('./cert.pem').toString('base64');;
-var pub = fs.readFileSync('./cert.pub').toString('base64');;
+//var pri = fs.readFileSync('./cert.pem').toString('base64');;
+//var pub = fs.readFileSync('./cert.pub').toString('base64');;
 
 if (process.argv.length < 4) {
     console.log("Usage: " + __filename + " NODE_ID HUB_URL");
     process.exit(-1);
 } else {
-    var NODE_ID = argv[2];
-    var HUB_URL = argv[3];
+    var NODE_ID = process.argv[2];
+    var HUB_URL = process.argv[3];
 }
 
 // get auth db url from hub
@@ -228,7 +228,7 @@ function login_user(name, auth) {
                         } else {
                             // if not, give a new key
                             let api_key = crypto.randomBytes(20).toString('hex');
-                            db.collection("users") updateOne({
+                            db.collection("users").updateOne({
                                 username: name
                             }, {
                                 api_key: api_key,
