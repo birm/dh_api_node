@@ -1,10 +1,9 @@
 FROM node
 
-ARG mongo_host
-ARG hub_url
-ARG hub_pw
+WORKDIR "/app"
+COPY package*.json ./
+COPY . .
 
-ADD . / ./
 RUN apt-get update
 RUN apt-get install curl sudo --yes --force-yes
 
@@ -19,4 +18,4 @@ RUN npm install
 # we need a private key
 
 
-ENTRYPOINT bash host.sh $hub_url $hub_pw $mongo_host
+ENTRYPOINT bash /app/host.sh $hub_url $hub_pw $mongo_host
