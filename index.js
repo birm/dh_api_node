@@ -62,8 +62,9 @@ function validate_origin(req, service) {
                 if (sa_err) {
                     key_rej();
                 }
-                if (sa_res) {
-                    key_res(sa_res);
+                var res_key = JSON.parse(sa_res || "[]").key;
+                if (res_key) {
+                    key_res(res_key);
                 } else {
                     key_rej();
                 }
