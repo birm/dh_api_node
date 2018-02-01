@@ -42,12 +42,15 @@ function sign_body(body){
 }
 
 // this won't live here, but, for symmetry
-// take in body without sign
+// take in request, validate body using headers
 // will need a way to get pub from hub
-function validate(pub, node_id, body, signature){
+function validate_origin(req){
+  var node_id = req.header("keyId");
+  var node_id = req.header("Signature");
+  // get key then do other promise?
   var promise = new Promise(function (resolve, reject){
     var ver = crypto.createVerify('RSA-SHA256');
-    ver.update(JSON.stringify(body))
+    ver.update(JSON.stringify(req.body))
     if (ver.verify(pub, signature, 'base64')){
       resolve(body)
     } else {
@@ -76,13 +79,8 @@ function find_service_host(service){
 
 app.route("/api/:service")
   // see notes below, I has a lot of needless trouble signing get requests
-  // NOTE key verification for get is done with headers
-  // keyId contains the node id per the hub
-  // signature contains the signature of the url
-  // userid contains the verified user id
-  // use of these are technically optional, but recommended
-  // NOTE that get signatures are of user id ONLY
-  // NOTE that this only happens for get, put and post contain it in the body
+  // NOTE the signature is done through headers, node id in keyId, signature in Signature
+  // NOTE that get signs only the user id, which is in the 'userid' header.
   .get(function (req, res){
     var resolve_get = function(service_path){
       forward_get = function(user_id){
@@ -108,10 +106,9 @@ app.route("/api/:service")
       forward_post = function(user_id){
         var body = req.body;
         delete body['api_key'];
-        body['user_id'] = user_id;
-        body['node_id'] = NODE_ID;
-        body['signature'] = sign_body(body);
+        body['_user_id'] = user_id;
         sa.post(service_path +"/" + req.originalUrl.splice(33).join("/"))
+          .set({'keyId': NODE_ID ,'Signature': sign_body(body)})
           .send(body)
           .end(function(sa_err, sa_res){
             if (sa_err){
@@ -130,10 +127,9 @@ app.route("/api/:service")
       forward_put = function(user_id){
         var body = req.body;
         delete body['api_key'];
-        body['user_id'] = user_id;
-        body['node_id'] = NODE_ID;
-        body['signature'] = sign_body(body);
+        body['_user_id'] = user_id;
         sa.put(service_path +"/" + req.originalUrl.splice(33).join("/"))
+          .set({'keyId': NODE_ID ,'Signature': sign_body(body)})
           .send(body)
           .end(function(sa_err, sa_res){
             if (sa_err){
