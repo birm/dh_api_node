@@ -126,7 +126,7 @@ app.route("/api/:service")
                         }
                     })
             }
-            validate_user(req.body.api_key).then(forward_get).catch(res.sendStatus(401));
+            validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
         }
         find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
     })
