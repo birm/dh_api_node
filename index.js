@@ -6,6 +6,7 @@ var sa = require('superagent');
 
 const crypto = require('crypto');
 
+var MongoClient = require('mongodb').MongoClient;
 
 app.use(bodyParser.urlencoded({
     extended: false
@@ -23,18 +24,19 @@ if (process.argv.length < 4) {
     var HUB_URL = argv[3];
 }
 
-function validate_user(key) {
-    var promise = new Promise(function(resolve, reject) {
-        // TODO actually check for the user
-        var user_id = 1;
-        if (user_id) {
-            resolve(user_id);
-        } else {
-            reject();
-        }
-    });
-    return promise;
-}
+// get auth db url from hub
+var MONGO_URL;
+sa.get(HUB_URL + "/get/variables/one/auth_db_url").end(function(sa_err, sa_res) {
+    if (sa_err) {
+        key_rej();
+    }
+    var res = JSON.parse(sa_res)
+    if (res) {
+        MONGO_URL = res;
+    } else {
+        key_rej();
+    }
+})
 
 // take in body without sign
 function sign_body(body) {
@@ -66,7 +68,6 @@ function validate_origin(req) {
                 }
                 var res = JSON.parse(sa_res)
                 if (res) {
-                    // pick and resolve a random element
                     key_res(res);
                 } else {
                     key_rej();
@@ -173,4 +174,112 @@ app.route("/api/:service")
         find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
     })
 
-// add user
+// users
+function new_user(name, auth) {
+    return new Promise(function(reject, resolve) {
+        // add to database
+        if (!MONGO_URL) {
+            reject();
+        } else {
+            MongoClient.connect(MONGO_URL, function(err, db) {
+                if (err) {
+                    reject();
+                }
+                db.collection("users").insertOne({
+                    username: name,
+                    auth: auth
+                }, function(err, result) {
+                    if (err) {
+                        reject();
+                    }
+                    if (result.expires > Date.now()) {
+                        resolve();
+                    } else {
+                        reject();
+                    }
+
+                    db.close();
+                });
+            });
+        }
+    });
+}
+
+function login_user(name, auth) {
+    return new Promise(function(reject, resolve) {
+        // add to database
+        if (!MONGO_URL) {
+            reject();
+        } else {
+            MongoClient.connect(MONGO_URL, function(err, db) {
+                if (err) {
+                    reject();
+                }
+                db.collection("users").findOne({
+                    username: name
+                }, function(err, result) {
+                    if (err) {
+                        reject();
+                    }
+                    if (result.auth === auth) {
+                        // if the key is valid, give the key
+                        if (!result.api_key || result.expires > Date.now()) {
+                            resolve(result.api_key);
+                        } else {
+                            // if not, give a new key
+                            let api_key = crypto.randomBytes(20).toString('hex');
+                            db.collection("users") updateOne({
+                                username: name
+                            }, {
+                                api_key: api_key,
+                                expires: Date.now() + 3600000
+                            }, function(err_new, res_new) {
+                                if (err) {
+                                    reject();
+                                }
+                                resolve(api_key)
+                            });
+                        }
+                    } else {
+                        reject();
+                    }
+                    db.close();
+                });
+            });
+        }
+    });
+}
+
+
+function validate_user(key) {
+    return new Promise(function(resolve, reject) {
+        if (!MONGO_URL) {
+            reject();
+        } else {
+            MongoClient.connect(MONGO_URL, function(err, db) {
+                if (err) {
+                    reject();
+                }
+                db.collection("users").findOne({
+                    api_key: key
+                }, function(err, result) {
+                    if (err) {
+                        reject();
+                    }
+                    if (result.expires > Date.now()) {
+                        resolve(result.username);
+                    } else {
+                        reject();
+                    }
+
+                    db.close();
+                });
+            });
+        }
+    });
+}
+
+// user endpoints
+app.post("/user/new")
+app.post("/user/login")
+app.post("/user/validate")
