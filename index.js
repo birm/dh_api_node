@@ -42,25 +42,30 @@ sa.get(HUB_URL + "/get/variables/one/auth_db_url").end(function(sa_err, sa_res) 
 })
 
 // take in body without sign
-function sign_body(body) {
+function sign_req(body, url) {
     var sign = crypto.createSign('RSA-SHA256');
-    sign.update(JSON.stringify(body));
+    var test_body = {body: body, path: url}
+    sign.update(JSON.stringify(test_body));
     return sign.sign(key, 'base64');
 }
 
 // this won't live here, but, for symmetry
 // take in request, validate body using headers
-function validate_origin(req) {
+function validate_origin(req, service) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
     // if we're signing user_id (get)
     if (req.header("userid")){
       body = req.header("userid")
+    } else {
+      body = req.body
     }
+    test_body = {body: body, path: "/api/" + service + req.originalUrl}
+    body.url = req.originalUrl.splice(3).split("/").join("/")
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
             var ver = crypto.createVerify('RSA-SHA256');
-            ver.update(JSON.stringify(body))
+            ver.update(JSON.stringify(test_body))
             if (ver.verify(pub, signature, 'base64')) {
                 resolve(body)
             } else {
@@ -105,17 +110,17 @@ function find_service_host(service) {
 app.route("/api/:service")
     // see notes below, I has a lot of needless trouble signing get requests
     // NOTE the signature is done through headers, node id in keyId, signature in Signature
-    // NOTE that get signs only the user id, which is in the 'userid' header.
+    // API key expected in api_key header in
     .get(function(req, res) {
         var resolve_get = function(service_path) {
             forward_get = function(user_id) {
                 var body = req.body;
                 delete body['api_key'];
-                sa.get(service_path + "/" + req.originalUrl.splice(3).join("/"))
+                sa.get(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
                     .set({
                         'userid': user_id,
                         'keyId': NODE_ID,
-                        'Signature': sign_body(user_id)
+                        'Signature': sign_req(user_id, req.originalUrl)
                     })
                     .send(body)
                     .end(function(sa_err, sa_res) {
@@ -134,12 +139,11 @@ app.route("/api/:service")
         var resolve_post = function(service_path) {
             forward_post = function(user_id) {
                 var body = req.body;
-                delete body['api_key'];
-                body['_user_id'] = user_id;
-                sa.post(service_path + "/" + req.originalUrl.splice(33).join("/"))
+                sa.post(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
                     .set({
+                        'userid': user_id,
                         'keyId': NODE_ID,
-                        'Signature': sign_body(body)
+                        'Signature': sign_req(req.body, req.originalUrl)
                     })
                     .send(body)
                     .end(function(sa_err, sa_res) {
@@ -150,7 +154,7 @@ app.route("/api/:service")
                         }
                     })
             }
-            validate_user(req.body.api_key).then(forward_post).catch(res.sendStatus(401));
+            validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
         }
         find_service_host(req.params.service).then(resolve_post).catch(res.sendStatus(401));
     })
@@ -159,11 +163,11 @@ app.route("/api/:service")
             forward_put = function(user_id) {
                 var body = req.body;
                 delete body['api_key'];
-                body['_user_id'] = user_id;
-                sa.put(service_path + "/" + req.originalUrl.splice(33).join("/"))
+                sa.put(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
                     .set({
+                        'userid': user_id,
                         'keyId': NODE_ID,
-                        'Signature': sign_body(body)
+                        'Signature': sign_req(req.body, req.originalUrl)
                     })
                     .send(body)
                     .end(function(sa_err, sa_res) {
@@ -174,7 +178,7 @@ app.route("/api/:service")
                         }
                     })
             }
-            validate_user(req.body.api_key).then(forward_put).catch(res.sendStatus(401));
+            validate_user(req.header.api_key).then(forward_put).catch(res.sendStatus(401));
         }
         find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
     })
