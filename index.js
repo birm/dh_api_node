@@ -81,7 +81,7 @@ function find_service_host(service) {
             if (sa_err) {
                 reject();
             }
-            var res = JSON.parse(sa_res)
+            var res = JSON.parse(sa_res  || "[]")
             if (res.length) {
                 // pick and resolve a random element
                 resolve(res[Math.floor(Math.random() * (res.length))]);
