@@ -280,6 +280,9 @@ function validate_user(key) {
 }
 
 // user endpoints
-app.post("/user/new")
-app.post("/user/login")
-app.post("/user/validate")
+app.post("/user/new", function(req,res){
+    new_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(500)));
+})
+app.post("/user/login", function(req,res){
+    login_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(401)));
+})
