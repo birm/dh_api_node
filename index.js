@@ -49,7 +49,7 @@ function sign_body(body) {
 // take in request, validate body using headers
 function validate_origin(req) {
     var node_id = req.header("keyId");
-    var node_id = req.header("Signature");
+    var signature = req.header("Signature");
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
             var ver = crypto.createVerify('RSA-SHA256');
