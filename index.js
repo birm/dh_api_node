@@ -13,8 +13,8 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(bodyParser.json());
 
-//var pri = fs.readFileSync('./cert.pem').toString('base64');;
-//var pub = fs.readFileSync('./cert.pub').toString('base64');;
+var pri = fs.readFileSync('./cert.pem').toString('base64');;
+var pub = fs.readFileSync('./cert.pub').toString('base64');;
 
 if (process.argv.length < 4) {
     console.log("Usage: " + __filename + " NODE_ID HUB_URL");
