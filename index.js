@@ -82,12 +82,7 @@ function find_service_host(service) {
             if (sa_err) {
                 reject({PLACE:1, err: sa_err});
             }
-            var host_list = [];
-            try{
-              host_list = JSON.parse(sa_res.body  || "[]")
-            } catch(err){
-              reject(err)
-            }
+            var host_list = sa_res.body;
             if (host_list.length) {
                 // pick and resolve a random element
                 resolve(host_list[Math.floor(Math.random() * (host_list.length))]);
