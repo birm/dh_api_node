@@ -60,6 +60,7 @@ function validate_origin(req, service) {
         var key_promise = new Promise(function(key_res, key_rej) {
             sa.get(HUB_URL + "/get/key/" + node_id).end(function(sa_err, sa_res) {
                 if (sa_err) {
+                    reject(sa_err);
                     key_rej();
                 }
                 var res_key = JSON.parse(sa_res || "[]").key;
@@ -80,7 +81,7 @@ function find_service_host(service) {
     return new Promise(function(resolve, reject) {
         sa.get(HUB_URL + "/get/services/one/" + service).end(function(sa_err, sa_res) {
             if (sa_err) {
-                reject();
+                reject(sa_err);
             }
             var res = JSON.parse(sa_res  || "[]")
             if (res.length) {
@@ -109,6 +110,7 @@ app.use("/api/:service", function(req,res){
               .send(body)
               .end(function(sa_err, sa_res) {
                   if (sa_err) {
+                      reject(sa_err);
                       res.sendStatus(500);
                   } else {
                       res.json(sa_res);
@@ -129,6 +131,7 @@ app.use("/api/:service", function(req,res){
               .send(body)
               .end(function(sa_err, sa_res) {
                   if (sa_err) {
+                      reject(err);
                       res.sendStatus(500)
                   } else {
                       res.json(sa_res);
@@ -173,48 +176,42 @@ app.use("/api/:service", function(req,res){
 function new_user(name, auth) {
     return new Promise(function(reject, resolve) {
         // add to database
-        if (!MONGO_URL) {
-            reject();
-        } else {
-            MongoClient.connect(MONGO_URL, function(err, db) {
+        MongoClient.connect(MONGO_URL, function(err, db) {
+            if (err) {
+                reject(err);
+            }
+            dbo = db.db("dh_auth");
+            dbo.collection("users").insertOne({
+                username: name,
+                auth: auth
+            }, function(err, result) {
                 if (err) {
-                    reject();
+                    reject(err);
                 }
-                dbo = db.db("dh_auth");
-                dbo.collection("users").insertOne({
-                    username: name,
-                    auth: auth
-                }, function(err, result) {
-                    if (err) {
-                        reject();
-                    }
-                    else {
-                        resolve();
-                    }
+                else {
+                    resolve();
+                }
 
-                    db.close();
-                });
+                db.close();
             });
-        }
+        });
+
     });
 }
 
 function login_user(name, auth) {
     return new Promise(function(reject, resolve) {
         // add to database
-        if (!MONGO_URL) {
-            reject();
-        } else {
             MongoClient.connect(MONGO_URL, function(err, db) {
                 if (err) {
-                    reject();
+                    reject(err);
                 }
                 dbo = db.db("dh_auth");
                 dbo.collection("users").findOne({
                     username: name
                 }, function(err, result) {
                     if (err) {
-                        reject();
+                        reject(err);
                     }
                     if (result.auth === auth) {
                         // if the key is valid, give the key
@@ -230,29 +227,26 @@ function login_user(name, auth) {
                                 expires: Date.now() + 3600000
                             }, function(err_new, res_new) {
                                 if (err) {
-                                    reject();
+                                    reject(err);
                                 }
                                 resolve(api_key)
                             });
                         }
                     } else {
-                        reject();
+                        reject("not match");
                     }
                     db.close();
                 });
             });
-        }
     });
 }
 
 
 function validate_user(key) {
     return new Promise(function(resolve, reject) {
-        if (!MONGO_URL) {
-            reject();
-        } else {
             MongoClient.connect(MONGO_URL, function(err, db) {
                 if (err) {
+                    reject(err);
                     reject();
                 }
                 dbo = db.db("dh_auth");
@@ -260,27 +254,26 @@ function validate_user(key) {
                     api_key: key
                 }, function(err, result) {
                     if (err) {
-                        reject();
+                        reject(err);
                     }
                     if (result.expires > Date.now()) {
                         resolve(result.username);
                     } else {
-                        reject();
+                        reject("NOTHING");
                     }
 
                     db.close();
                 });
             });
-        }
     });
 }
 
 // user endpoints
 app.post("/user/new", function(req,res){
-    new_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(500)));
+    new_user(req.body.name, req.body.auth).then(res.send).catch((e)=>(res.sendStatus(500); res.send(e)));
 })
 app.post("/user/login", function(req,res){
-    login_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(401)));
+    login_user(req.body.name, req.body.auth).then(res.send).catch((e)=>(res.sendStatus(401); res.send(e)));
 })
 
 
