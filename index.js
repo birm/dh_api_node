@@ -117,7 +117,7 @@ app.use("/api/:service", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
+      validate_user(req.header.api_key, forward_get).catch(res.sendStatus(401));
   }
   var resolve_post = function(service_path) {
       forward_post = function(user_id) {
@@ -131,14 +131,14 @@ app.use("/api/:service", function(req,res){
               .send(body)
               .end(function(sa_err, sa_res) {
                   if (sa_err) {
-                      reject(err);
+                      throw err
                       res.sendStatus(500)
                   } else {
                       res.json(sa_res);
                   }
               })
       }
-      validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
+      validate_user(req.header.api_key, forward_post).catch(res.sendStatus(401));
   }
   var resolve_put = function(service_path) {
       forward_put = function(user_id) {
@@ -159,7 +159,7 @@ app.use("/api/:service", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key).then(forward_put).catch(res.sendStatus(401));
+      validate_user(req.header.api_key, forward_put).catch(res.sendStatus(401));
   }
   if (req.method === "GET"){
     find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
@@ -172,108 +172,66 @@ app.use("/api/:service", function(req,res){
   }
 })
 
-// users
-function new_user(name, auth) {
-    return new Promise(function(reject, resolve) {
-        // add to database
-        MongoClient.connect(MONGO_URL, function(err, db) {
-            if (err) {
-                reject(err);
-            }
-            dbo = db.db("dh_auth");
-            dbo.collection("users").insertOne({
-                username: name,
-                auth: auth
-            }, function(err, result) {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve();
-                }
+function run_mongo(operation, query, data, collection, callback){
+  MongoClient.connect(MONGO_URL, function(err, db) {
+      if (err) {
+          throw err
+      }
+      var dbo = db.db("dh_auth");
+      function handle_result(err, result){
+        if (err){
+          callback(err);
+        } else {
+          callback(result);
+        }
+      }
+      if (operation === "insertOne"){
+        dbo.collection(collection).insertOne(data, handle_result);
+      } else if (operation === "findOne"){
+        dbo.collection("users").findOne(query, handle_result);
+      } else if (operation === "updateOne"){
+        dbo.collection(collection).updateOne(query, data, handle_result);
+      }
+      db.close();
 
-                db.close();
-            });
-        });
-
-    });
+  });
 }
 
 function login_user(name, auth) {
-    return new Promise(function(reject, resolve) {
-        // add to database
-            MongoClient.connect(MONGO_URL, function(err, db) {
-                if (err) {
-                    reject(err);
-                }
-                dbo = db.db("dh_auth");
-                dbo.collection("users").findOne({
-                    username: name
-                }, function(err, result) {
-                    if (err) {
-                        reject(err);
-                    }
-                    if (result.auth === auth) {
-                        // if the key is valid, give the key
-                        if (!result.api_key || result.expires > Date.now()) {
-                            resolve(result.api_key);
-                        } else {
-                            // if not, give a new key
-                            let api_key = crypto.randomBytes(20).toString('hex');
-                            dbo.collection("users").updateOne({
-                                username: name
-                            }, {
-                                api_key: api_key,
-                                expires: Date.now() + 3600000
-                            }, function(err_new, res_new) {
-                                if (err) {
-                                    reject(err);
-                                }
-                                resolve(api_key)
-                            });
-                        }
-                    } else {
-                        reject("not match");
-                    }
-                    db.close();
-                });
-            });
-    });
+  run_mongo("selectOne",  {username:name}, [], "users", function(user){
+    if (user.auth === auth){
+      if (user.api_key && user.expires > Date.now()) {
+        res.send(user.api_key);
+      } else {
+        var api_key = crypto.randomBytes(20).toString('hex');
+        run_mongo("updateOne",  {username:name, auth: auth},{
+            api_key: api_key,
+            expires: Date.now() + 3600000
+        },  "users", function(e){res.send(e)})
+      }
+    } else {
+      res.sendStatus(401);
+    }
+  });
 }
 
 
-function validate_user(key) {
-    return new Promise(function(resolve, reject) {
-            MongoClient.connect(MONGO_URL, function(err, db) {
-                if (err) {
-                    reject(err);
-                    reject();
-                }
-                dbo = db.db("dh_auth");
-                dbo.collection("users").findOne({
-                    api_key: key
-                }, function(err, result) {
-                    if (err) {
-                        reject(err);
-                    }
-                    if (result.expires > Date.now()) {
-                        resolve(result.username);
-                    } else {
-                        reject("NOTHING");
-                    }
-
-                    db.close();
-                });
-            });
+function validate_user(key, validated_cb) {
+    run_mongo("selectOne",  {apikey:key}, [], "users" function(user){
+      if (user.api_key && user.expires > Date.now()) {
+        validated_cb(user.api_key);
+      } else {
+        res.sendStatus(401);
+      }
     });
 }
 
 // user endpoints
 app.post("/user/new", function(req,res){
-    new_user(req.body.name, req.body.auth).then(res.send).catch((e)=>(function(e){res.sendStatus(500); res.send(e)}));
+    run_mongo("insertOne", [], {username:req.body.name, auth: req.body.auth}, "users", res.send);
 })
 app.post("/user/login", function(req,res){
-    login_user(req.body.name, req.body.auth).then(res.send).catch(function(e){res.sendStatus(401); res.send(e)});
+    login_user(req.body.name, req.body.auth);
 })
 
 
