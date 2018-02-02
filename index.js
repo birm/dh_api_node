@@ -87,7 +87,7 @@ function find_service_host(service) {
                 // pick and resolve a random element
                 resolve(host_list[Math.floor(Math.random() * (host_list.length))]);
             } else {
-                reject({PLACE:2});
+                reject({PLACE:2, service: service});
             }
         })
     })
@@ -95,7 +95,7 @@ function find_service_host(service) {
 
 function validate_user(key) {
   return new Promise(function (resolve, reject){
-    run_mongo("selectOne",  {api_key:key}, [], "users", function(user){
+    run_mongo("findOne",  {api_key:key}, [], "users", function(user){
       if (user.api_key && user.expires > Date.now()) {
         resolve(user.name);
       } else {
@@ -127,7 +127,7 @@ app.use("/api", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
+      validate_user(req.header.api_key).then(forward_get).catch((e)=>(res.send(e)));
   }
   var resolve_post = function(service_path) {
       forward_post = function(user_id) {
@@ -148,7 +148,7 @@ app.use("/api", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
+      validate_user(req.header.api_key).then(forward_post).catch((e)=>(res.send(e)));
   }
   var resolve_put = function(service_path) {
       forward_put = function(user_id) {
@@ -174,17 +174,17 @@ app.use("/api", function(req,res){
       });
   }
   if (req.method === "GET"){
-    find_service_host(req.originalUrl.split("/")[1]).then(resolve_get).catch(function(e){
+    find_service_host(req.originalUrl.split("/")[2]).then(resolve_get).catch(function(e){
       res.send(e)
     });
   }
   else if (req.method === "POST"){
-    find_service_host(req.originalUrl.split("/")[1]).then(resolve_post).catch(function(e){
+    find_service_host(req.originalUrl.split("/")[2]).then(resolve_post).catch(function(e){
       res.send(e)
     });
   }
   else if (req.method === "PUT"){
-    find_service_host(req.originalUrl.split("/")[1]).then(resolve_put).catch(function(e){
+    find_service_host(req.originalUrl.split("/")[2]).then(resolve_put).catch(function(e){
       res.send(e)
     });
   }
