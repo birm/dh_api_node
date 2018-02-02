@@ -207,7 +207,7 @@ function login_user(name, auth, res) {
         run_mongo("updateOne",  {username:name, auth: auth}, {
             api_key: api_key,
             expires: Date.now() + 3600000
-        },  "users", function(e){ res.send(api_key)
+        },  "users", function(e){ if(e.name === "MongoError") {res.sendStatus(500)} else {res.send(api_key})
         })
       }
     } else {
