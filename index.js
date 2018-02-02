@@ -197,8 +197,8 @@ function run_mongo(operation, query, data, collection, callback){
   });
 }
 
-function login_user(name, auth) {
-  run_mongo("selectOne",  {username:name}, [], "users", function(user){
+function login_user(name, auth, res) {
+  run_mongo("findOne",  {username:name}, [], "users", function(user){
     if (user.auth === auth){
       if (user.api_key && user.expires > Date.now()) {
         res.send(user.api_key);
@@ -207,7 +207,8 @@ function login_user(name, auth) {
         run_mongo("updateOne",  {username:name, auth: auth},{
             api_key: api_key,
             expires: Date.now() + 3600000
-        },  "users", function(e){res.send(e)})
+        },  "users", function(e){ res.send(api_key)
+        })
       }
     } else {
       res.sendStatus(401);
@@ -217,7 +218,7 @@ function login_user(name, auth) {
 
 
 function validate_user(key, validated_cb) {
-    run_mongo("selectOne",  {apikey:key}, [], "users", function(user){
+    run_mongo("selectOne",  {api_key:key}, [], "users", function(user){
       if (user.api_key && user.expires > Date.now()) {
         validated_cb(user.api_key);
       } else {
@@ -228,10 +229,10 @@ function validate_user(key, validated_cb) {
 
 // user endpoints
 app.post("/user/new", function(req,res){
-    run_mongo("insertOne", [], {username:req.body.name, auth: req.body.auth}, "users", res.send);
+    run_mongo("insertOne", [], {username: req.body.name, auth: req.body.auth}, "users", (x) => res.send(x));
 })
 app.post("/user/login", function(req,res){
-    login_user(req.body.name, req.body.auth);
+    login_user(req.body.name, req.body.auth, res);
 })
 
 
