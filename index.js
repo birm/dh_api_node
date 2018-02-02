@@ -188,10 +188,8 @@ function new_user(name, auth) {
                     if (err) {
                         reject();
                     }
-                    if (result.expires > Date.now()) {
+                    else {
                         resolve();
-                    } else {
-                        reject();
                     }
 
                     db.close();
@@ -284,5 +282,6 @@ app.post("/user/new", function(req,res){
 app.post("/user/login", function(req,res){
     login_user(req.body.name, req.body.auth).then(res.send).catch(()=>(res.sendStatus(401)));
 })
+
 
 app.listen(8081, () => console.log('Listening'));
