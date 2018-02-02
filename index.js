@@ -180,7 +180,7 @@ function new_user(name, auth) {
                 if (err) {
                     reject();
                 }
-                dbo.db("dh_auth");
+                dbo = db.db("dh_auth");
                 dbo.collection("users").insertOne({
                     username: name,
                     auth: auth
@@ -211,7 +211,7 @@ function login_user(name, auth) {
                 if (err) {
                     reject();
                 }
-                dbo.db("dh_auth");
+                dbo = db.db("dh_auth");
                 dbo.collection("users").findOne({
                     username: name
                 }, function(err, result) {
@@ -257,7 +257,7 @@ function validate_user(key) {
                 if (err) {
                     reject();
                 }
-                dbo.db("dh_auth");
+                dbo = db.db("dh_auth");
                 dbo.collection("users").findOne({
                     api_key: key
                 }, function(err, result) {
