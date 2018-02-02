@@ -60,8 +60,7 @@ function validate_origin(req, service) {
         var key_promise = new Promise(function(key_res, key_rej) {
             sa.get(HUB_URL + "/get/key/" + node_id).end(function(sa_err, sa_res) {
                 if (sa_err) {
-                    reject(sa_err);
-                    key_rej();
+                    key_rej(sa_err);
                 }
                 var res_key = JSON.parse(sa_res || "[]").key;
                 if (res_key) {
@@ -81,20 +80,32 @@ function find_service_host(service) {
     return new Promise(function(resolve, reject) {
         sa.get(HUB_URL + "/get/services/one/" + service).end(function(sa_err, sa_res) {
             if (sa_err) {
-                reject(sa_err);
+                reject({PLACE:1, err: sa_err});
             }
-            var res = JSON.parse(sa_res  || "[]")
-            if (res.length) {
+            var host_list = JSON.parse(sa_res  || "[]")
+            if (host_list.length) {
                 // pick and resolve a random element
-                resolve(res[Math.floor(Math.random() * (res.length))]);
+                resolve(host_list[Math.floor(Math.random() * (host_list.length))]);
             } else {
-                reject();
+                reject({PLACE:2});
             }
         })
     })
 }
 
-app.use("/api/:service", function(req,res){
+function validate_user(key) {
+  return new Promise(function (resolve, reject){
+    run_mongo("selectOne",  {api_key:key}, [], "users", function(user){
+      if (user.api_key && user.expires > Date.now()) {
+        resolve(user.name);
+      } else {
+        reject({PLACE:3});
+      }
+    });
+  })
+}
+
+app.use("/api", function(req,res){
   // NOTE the signature is done through headers, node id in keyId, signature in Signature
   // API key expected in api_key header in
   var resolve_get = function(service_path) {
@@ -110,14 +121,13 @@ app.use("/api/:service", function(req,res){
               .send(body)
               .end(function(sa_err, sa_res) {
                   if (sa_err) {
-                      reject(sa_err);
                       res.sendStatus(500);
                   } else {
                       res.json(sa_res);
                   }
               })
       }
-      validate_user(req.header.api_key, forward_get).catch(res.sendStatus(401));
+      validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
   }
   var resolve_post = function(service_path) {
       forward_post = function(user_id) {
@@ -138,7 +148,7 @@ app.use("/api/:service", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key, forward_post).catch(res.sendStatus(401));
+      validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
   }
   var resolve_put = function(service_path) {
       forward_put = function(user_id) {
@@ -159,16 +169,24 @@ app.use("/api/:service", function(req,res){
                   }
               })
       }
-      validate_user(req.header.api_key, forward_put).catch(res.sendStatus(401));
+      validate_user(req.header.api_key).then(forward_put).catch(function(e){
+        res.send(e)
+      });
   }
   if (req.method === "GET"){
-    find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
+    find_service_host(req.originalUrl.split("/")[1]).then(resolve_get).catch(function(e){
+      res.send(e)
+    });
   }
   else if (req.method === "POST"){
-    find_service_host(req.params.service).then(resolve_post).catch(res.sendStatus(401));
+    find_service_host(req.originalUrl.split("/")[1]).then(resolve_post).catch(function(e){
+      res.send(e)
+    });
   }
   else if (req.method === "PUT"){
-    find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
+    find_service_host(req.originalUrl.split("/")[1]).then(resolve_put).catch(function(e){
+      res.send(e)
+    });
   }
 })
 
@@ -207,8 +225,12 @@ function login_user(name, auth, res) {
         run_mongo("updateOne",  {username:name, auth: auth}, {
             api_key: api_key,
             expires: Date.now() + 3600000
-        },  "users", function(e){ if(e.name === "MongoError") {res.sendStatus(500)} else {res.send(api_key})
-        })
+        },  "users", function(e){
+          if(e.name === "MongoError"){
+          res.sendStatus(500)
+        } else {
+          res.send(api_key)
+        }})
       }
     } else {
       res.sendStatus(401);
@@ -216,16 +238,6 @@ function login_user(name, auth, res) {
   });
 }
 
-
-function validate_user(key, validated_cb) {
-    run_mongo("selectOne",  {api_key:key}, [], "users", function(user){
-      if (user.api_key && user.expires > Date.now()) {
-        validated_cb(user.api_key);
-      } else {
-        res.sendStatus(401);
-      }
-    });
-}
 
 // user endpoints
 app.post("/user/new", function(req,res){
