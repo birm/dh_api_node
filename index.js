@@ -23,7 +23,7 @@ if (process.argv.length < 5) {
 } else {
     var NODE_ID = process.argv[2];
     var HUB_URL = process.argv[3];
-    var MONGO_URL = "mongodb://" + process.argv[4] + ":27017";
+    var MONGO_URL = "mongodb://" + process.argv[4];
 }
 
 // take in body without sign
