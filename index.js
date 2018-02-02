@@ -188,7 +188,7 @@ function run_mongo(operation, query, data, collection, callback){
       if (operation === "insertOne"){
         dbo.collection(collection).insertOne(data, handle_result);
       } else if (operation === "findOne"){
-        dbo.collection("users").findOne(query, handle_result);
+        dbo.collection(collection).findOne(query, handle_result);
       } else if (operation === "updateOne"){
         dbo.collection(collection).updateOne(query, data, handle_result);
       }
@@ -217,7 +217,7 @@ function login_user(name, auth) {
 
 
 function validate_user(key, validated_cb) {
-    run_mongo("selectOne",  {apikey:key}, [], "users" function(user){
+    run_mongo("selectOne",  {apikey:key}, [], "users", function(user){
       if (user.api_key && user.expires > Date.now()) {
         validated_cb(user.api_key);
       } else {
