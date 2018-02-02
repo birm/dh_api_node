@@ -93,81 +93,81 @@ function find_service_host(service) {
     })
 }
 
-app.route("/api/:service")
-    // see notes below, I has a lot of needless trouble signing get requests
-    // NOTE the signature is done through headers, node id in keyId, signature in Signature
-    // API key expected in api_key header in
-    .get(function(req, res) {
-        var resolve_get = function(service_path) {
-            forward_get = function(user_id) {
-                var body = req.body;
-                delete body['api_key'];
-                sa.get(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
-                    .set({
-                        'userid': user_id,
-                        'keyId': NODE_ID,
-                        'Signature': sign_req(user_id, req.originalUrl)
-                    })
-                    .send(body)
-                    .end(function(sa_err, sa_res) {
-                        if (sa_err) {
-                            res.sendStatus(500);
-                        } else {
-                            res.json(sa_res);
-                        }
-                    })
-            }
-            validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
-        }
-        find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
-    })
-    .post(function(req, res) {
-        var resolve_post = function(service_path) {
-            forward_post = function(user_id) {
-                var body = req.body;
-                sa.post(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
-                    .set({
-                        'userid': user_id,
-                        'keyId': NODE_ID,
-                        'Signature': sign_req(req.body, req.originalUrl)
-                    })
-                    .send(body)
-                    .end(function(sa_err, sa_res) {
-                        if (sa_err) {
-                            res.sendStatus(500)
-                        } else {
-                            res.json(sa_res);
-                        }
-                    })
-            }
-            validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
-        }
-        find_service_host(req.params.service).then(resolve_post).catch(res.sendStatus(401));
-    })
-    .put(function(req, res) {
-        var resolve_put = function(service_path) {
-            forward_put = function(user_id) {
-                var body = req.body;
-                delete body['api_key'];
-                sa.put(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
-                    .set({
-                        'userid': user_id,
-                        'keyId': NODE_ID,
-                        'Signature': sign_req(req.body, req.originalUrl)
-                    })
-                    .send(body)
-                    .end(function(sa_err, sa_res) {
-                        if (sa_err) {
-                            res.sendStatus(500)
-                        } else {
-                            res.json(sa_res);
-                        }
-                    })
-            }
-            validate_user(req.header.api_key).then(forward_put).catch(res.sendStatus(401));
-        }
-        find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
-    })
+app.use("/api/:service", function(req,res){
+  // NOTE the signature is done through headers, node id in keyId, signature in Signature
+  // API key expected in api_key header in
+  var resolve_get = function(service_path) {
+      forward_get = function(user_id) {
+          var body = req.body;
+          delete body['api_key'];
+          sa.get(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
+              .set({
+                  'userid': user_id,
+                  'keyId': NODE_ID,
+                  'Signature': sign_req(user_id, req.originalUrl)
+              })
+              .send(body)
+              .end(function(sa_err, sa_res) {
+                  if (sa_err) {
+                      res.sendStatus(500);
+                  } else {
+                      res.json(sa_res);
+                  }
+              })
+      }
+      validate_user(req.header.api_key).then(forward_get).catch(res.sendStatus(401));
+  }
+  var resolve_post = function(service_path) {
+      forward_post = function(user_id) {
+          var body = req.body;
+          sa.post(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
+              .set({
+                  'userid': user_id,
+                  'keyId': NODE_ID,
+                  'Signature': sign_req(req.body, req.originalUrl)
+              })
+              .send(body)
+              .end(function(sa_err, sa_res) {
+                  if (sa_err) {
+                      res.sendStatus(500)
+                  } else {
+                      res.json(sa_res);
+                  }
+              })
+      }
+      validate_user(req.header.api_key).then(forward_post).catch(res.sendStatus(401));
+  }
+  var resolve_put = function(service_path) {
+      forward_put = function(user_id) {
+          var body = req.body;
+          delete body['api_key'];
+          sa.put(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
+              .set({
+                  'userid': user_id,
+                  'keyId': NODE_ID,
+                  'Signature': sign_req(req.body, req.originalUrl)
+              })
+              .send(body)
+              .end(function(sa_err, sa_res) {
+                  if (sa_err) {
+                      res.sendStatus(500)
+                  } else {
+                      res.json(sa_res);
+                  }
+              })
+      }
+      validate_user(req.header.api_key).then(forward_put).catch(res.sendStatus(401));
+  }
+  if (req.method === "GET"){
+    find_service_host(req.params.service).then(resolve_get).catch(res.sendStatus(401));
+  }
+  else if (req.method === "POST"){
+    find_service_host(req.params.service).then(resolve_post).catch(res.sendStatus(401));
+  }
+  else if (req.method === "PUT"){
+    find_service_host(req.params.service).then(resolve_put).catch(res.sendStatus(401));
+  }
+})
 
 // users
 function new_user(name, auth) {
