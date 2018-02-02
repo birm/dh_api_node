@@ -190,7 +190,7 @@ function run_mongo(operation, query, data, collection, callback){
       } else if (operation === "findOne"){
         dbo.collection(collection).findOne(query, handle_result);
       } else if (operation === "updateOne"){
-        dbo.collection(collection).updateOne(query, data, handle_result);
+        dbo.collection(collection).updateOne(query, { $set: data }, handle_result);
       }
       db.close();
 
@@ -204,7 +204,7 @@ function login_user(name, auth, res) {
         res.send(user.api_key);
       } else {
         var api_key = crypto.randomBytes(20).toString('hex');
-        run_mongo("updateOne",  {username:name, auth: auth},{
+        run_mongo("updateOne",  {username:name, auth: auth}, {
             api_key: api_key,
             expires: Date.now() + 3600000
         },  "users", function(e){ res.send(api_key)
