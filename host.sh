@@ -16,4 +16,4 @@ mongo --host $mongo_host dh_auth --eval 'db.createCollection("users")'
 mongo --host $mongo_host dh_auth --eval 'db.users.createIndex( { "username": 1 }, { unique: true } )'
 
 
-nodejs index.js $NODE_ID $hub_pw $mongo_host
+nodejs index.js $NODE_ID $hub_url $mongo_host
