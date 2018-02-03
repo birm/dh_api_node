@@ -13,5 +13,5 @@ mongo --host $mongo_host dh_auth --eval 'db.createCollection("users")'
 mongo --host $mongo_host dh_auth --eval 'db.users.createIndex( { "username": 1 }, { unique: true } )'
 
 
-NODE_ID=$(curl -X POST "localhost:8080/post/auth" --data "admin_password=HI&pubkey= $pk")
+NODE_ID=$(curl -X POST "$hub_url/post/auth" --data "admin_password=HI&pubkey= $pk")
 nodejs index.js $NODE_ID $hub_url $mongo_host
