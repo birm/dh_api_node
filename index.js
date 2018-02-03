@@ -36,12 +36,12 @@ function sign_req(body, url) {
 
 // this won't live here, but, for symmetry
 // take in request, validate body using headers
-function validate_origin(req, service) {
+function validate_origin(req, service, is_get) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
     // if we're signing user_id (get)
     var body;
-    if (req.header("userid")){
+    if (is_get){
       body = req.header("userid")
     } else {
       body = req.body
@@ -49,6 +49,8 @@ function validate_origin(req, service) {
     test_body = {body: body, path: "/api/" + service + req.originalUrl}
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
+            // missing plus signs, they're spaces
+            pub = "-----BEGIN PUBLIC KEY-----" + pub.slice(26, -24).replace(/ /g , "+") + "-----END PUBLIC KEY-----"
             var ver = crypto.createVerify('RSA-SHA256');
             ver.update(JSON.stringify(test_body))
             if (ver.verify(pub, signature, 'base64')) {
@@ -58,7 +60,7 @@ function validate_origin(req, service) {
             }
         }
         var key_promise = new Promise(function(key_res, key_rej) {
-            sa.get(HUB_URL + "/get/key/" + node_id).end(function(sa_err, sa_res) {
+            sa.get(HUB_URL + "/get/key/" + node_id).then(function(sa_res) {
                 var res_key = JSON.parse(sa_res.text || "[]").key;
                 if (res_key) {
                     key_res(res_key);
@@ -66,6 +68,7 @@ function validate_origin(req, service) {
                     key_rej();
                 }
             })
+            .catch((e)=>(reject(e)))
         });
         key_promise.then(val_sign).catch(reject);
     });
