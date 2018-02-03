@@ -40,13 +40,13 @@ function validate_origin(req, service) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
     // if we're signing user_id (get)
+    var body;
     if (req.header("userid")){
       body = req.header("userid")
     } else {
       body = req.body
     }
     test_body = {body: body, path: "/api/" + service + req.originalUrl}
-    body.url = req.originalUrl.splice(3).split("/").join("/")
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
             var ver = crypto.createVerify('RSA-SHA256');
@@ -59,10 +59,7 @@ function validate_origin(req, service) {
         }
         var key_promise = new Promise(function(key_res, key_rej) {
             sa.get(HUB_URL + "/get/key/" + node_id).end(function(sa_err, sa_res) {
-                if (sa_err) {
-                    key_rej(sa_err);
-                }
-                var res_key = JSON.parse(sa_res || "[]").key;
+                var res_key = JSON.parse(sa_res.text || "[]").key;
                 if (res_key) {
                     key_res(res_key);
                 } else {
@@ -76,30 +73,13 @@ function validate_origin(req, service) {
     return ver_promise;
 }
 
-function find_service_host(service) {
-    return new Promise(function(resolve, reject) {
-        sa.get(HUB_URL + "/get/services/one/" + service).end(function(sa_err, sa_res) {
-            if (sa_err) {
-                reject({PLACE:1, err: sa_err});
-            }
-            var host_list = sa_res.body;
-            if (host_list.length) {
-                // pick and resolve a random element
-                resolve(host_list[Math.floor(Math.random() * (host_list.length))]);
-            } else {
-                reject({PLACE:2, service: service});
-            }
-        })
-    })
-}
-
 function validate_user(key) {
   return new Promise(function (resolve, reject){
     run_mongo("findOne",  {api_key:key}, [], "users", function(user){
       if (user && user.api_key && user.expires > Date.now()) {
         resolve(user.username);
       } else {
-        reject({PLACE:3, user:user, key:key});
+        reject(401);
       }
     });
   })
