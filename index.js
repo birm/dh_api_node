@@ -27,26 +27,22 @@ if (process.argv.length < 5) {
 }
 
 // take in body without sign
-function sign_req(body, url) {
+function sign_req(body, url, userid) {
     var sign = crypto.createSign('RSA-SHA256');
-    var test_body = {body: body, path: url}
+    var test_body = {body: body, path: url, userid: userid}
     sign.update(JSON.stringify(test_body));
     return sign.sign(pri, 'base64');
 }
 
 // this won't live here, but, for symmetry
 // take in request, validate body using headers
-function validate_origin(req, service, is_get) {
+function validate_origin(req, service, userid) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
     // if we're signing user_id (get)
-    var body;
-    if (is_get){
-      body = req.header("userid")
-    } else {
-      body = req.body
-    }
-    test_body = {body: body, path: "/api/" + service + req.originalUrl}
+    var body = req.body;
+    var userid = req.header("userid")
+    test_body = {body: body, path: "/api/" + service + req.originalUrl, userid: userid}
     var ver_promise = new Promise(function(resolve, reject) {
         function val_sign(pub) {
             // missing plus signs, they're spaces
@@ -114,7 +110,7 @@ app.use("/api", function(req,res){
               .set({
                   'userid': user_id,
                   'keyId': NODE_ID,
-                  'Signature': sign_req(user_id, req.originalUrl)
+                  'Signature': sign_req(user_id, req.originalUrl, user_id)
               })
               .then((d) => (res.send(d.text)))
               .catch((e) => (res.send(e)))
@@ -128,7 +124,7 @@ app.use("/api", function(req,res){
               .set({
                   'userid': user_id,
                   'keyId': NODE_ID,
-                  'Signature': sign_req(req.body, req.originalUrl)
+                  'Signature': sign_req(req.body, req.originalUrl, user_id)
               })
               .send(body)
               .then((d) => (res.send(d.text)))
@@ -143,7 +139,7 @@ app.use("/api", function(req,res){
               .set({
                   'userid': user_id,
                   'keyId': NODE_ID,
-                  'Signature': sign_req(req.body, req.originalUrl)
+                  'Signature': sign_req(req.body, req.originalUrl, user_id)
               })
               .send(body)
               .then((d) => (res.send(d.text)))
