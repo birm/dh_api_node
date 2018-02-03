@@ -31,7 +31,7 @@ function sign_req(body, url) {
     var sign = crypto.createSign('RSA-SHA256');
     var test_body = {body: body, path: url}
     sign.update(JSON.stringify(test_body));
-    return sign.sign(key, 'base64');
+    return sign.sign(pri, 'base64');
 }
 
 // this won't live here, but, for symmetry
@@ -96,10 +96,10 @@ function find_service_host(service) {
 function validate_user(key) {
   return new Promise(function (resolve, reject){
     run_mongo("findOne",  {api_key:key}, [], "users", function(user){
-      if (user.api_key && user.expires > Date.now()) {
+      if (user && user.api_key && user.expires > Date.now()) {
         resolve(user.name);
       } else {
-        reject({PLACE:3});
+        reject({PLACE:3, user:user, key:key});
       }
     });
   })
@@ -110,24 +110,16 @@ app.use("/api", function(req,res){
   // API key expected in api_key header in
   var resolve_get = function(service_path) {
       forward_get = function(user_id) {
-          var body = req.body;
-          delete body['api_key'];
           sa.get(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
               .set({
                   'userid': user_id,
                   'keyId': NODE_ID,
                   'Signature': sign_req(user_id, req.originalUrl)
               })
-              .send(body)
-              .end(function(sa_err, sa_res) {
-                  if (sa_err) {
-                      res.sendStatus(500);
-                  } else {
-                      res.json(sa_res);
-                  }
-              })
+              .then((d) => (res.send(d.body)))
+              .catch((e) => (res.send(e)))
       }
-      validate_user(req.header.api_key).then(forward_get).catch((e)=>(res.send(e)));
+      validate_user(req.header('api_key')).then(forward_get).catch((e)=>(res.send(e)));
   }
   var resolve_post = function(service_path) {
       forward_post = function(user_id) {
@@ -139,21 +131,14 @@ app.use("/api", function(req,res){
                   'Signature': sign_req(req.body, req.originalUrl)
               })
               .send(body)
-              .end(function(sa_err, sa_res) {
-                  if (sa_err) {
-                      throw err
-                      res.sendStatus(500)
-                  } else {
-                      res.json(sa_res);
-                  }
-              })
+              .then((d) => (res.send(d.text)))
+              .catch((e) => (res.send(e)))
       }
-      validate_user(req.header.api_key).then(forward_post).catch((e)=>(res.send(e)));
+      validate_user(req.header('api_key')).then(forward_post).catch((e)=>(res.send(e)));
   }
   var resolve_put = function(service_path) {
       forward_put = function(user_id) {
           var body = req.body;
-          delete body['api_key'];
           sa.put(service_path + "/" + req.originalUrl.split("/").splice(3).join("/"))
               .set({
                   'userid': user_id,
@@ -161,15 +146,10 @@ app.use("/api", function(req,res){
                   'Signature': sign_req(req.body, req.originalUrl)
               })
               .send(body)
-              .end(function(sa_err, sa_res) {
-                  if (sa_err) {
-                      res.sendStatus(500)
-                  } else {
-                      res.json(sa_res);
-                  }
-              })
+              .then((d) => (res.send(d.text)))
+              .catch((e) => (res.send(e)))
       }
-      validate_user(req.header.api_key).then(forward_put).catch(function(e){
+      validate_user(req.header('api_key')).then(forward_put).catch(function(e){
         res.send(e)
       });
   }
