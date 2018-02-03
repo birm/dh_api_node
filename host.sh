@@ -12,6 +12,6 @@ openssl rsa -in cert.pem -pubout -out cert.pub
 mongo --host $mongo_host dh_auth --eval 'db.createCollection("users")'
 mongo --host $mongo_host dh_auth --eval 'db.users.createIndex( { "username": 1 }, { unique: true } )'
 
-sleep 5s
+sleep 20s
 NODE_ID=$(curl -X POST "$hub_url/post/auth" --data "admin_password=$hub_pw&pubkey=$(cat cert.pub)")
 nodejs index.js $NODE_ID $hub_url $mongo_host
