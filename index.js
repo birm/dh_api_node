@@ -76,6 +76,23 @@ function validate_origin(req, service, is_get) {
     return ver_promise;
 }
 
+function find_service_host(service) {
+    return new Promise(function(resolve, reject) {
+        sa.get(HUB_URL + "/get/services/one/" + service).end(function(sa_err, sa_res) {
+            if (sa_err) {
+                reject({PLACE:1, err: sa_err});
+            }
+            var host_list = sa_res.body;
+            if (host_list.length) {
+                // pick and resolve a random element
+                resolve(host_list[Math.floor(Math.random() * (host_list.length))]);
+            } else {
+                reject({PLACE:2, service: service});
+            }
+        })
+    })
+}
+
 function validate_user(key) {
   return new Promise(function (resolve, reject){
     run_mongo("findOne",  {api_key:key}, [], "users", function(user){
