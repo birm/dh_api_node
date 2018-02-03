@@ -36,7 +36,7 @@ function sign_req(body, url, userid) {
 
 // this won't live here, but, for symmetry
 // take in request, validate body using headers
-function validate_origin(req, service, userid) {
+function validate_origin(req, service) {
     var node_id = req.header("keyId");
     var signature = req.header("Signature");
     // if we're signing user_id (get)
@@ -110,7 +110,7 @@ app.use("/api", function(req,res){
               .set({
                   'userid': user_id,
                   'keyId': NODE_ID,
-                  'Signature': sign_req(user_id, req.originalUrl, user_id)
+                  'Signature': sign_req(req.body, req.originalUrl, user_id)
               })
               .then((d) => (res.send(d.text)))
               .catch((e) => (res.send(e)))
