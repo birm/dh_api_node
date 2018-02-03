@@ -8,6 +8,8 @@ openssl rsa -in cert.pem -pubout -out cert.pub
 
 # host app
 
+bash wait_for.sh $mongo_host
+bash wait_for.sh $hub_url
 
 mongo --host $mongo_host dh_auth --eval 'db.createCollection("users")'
 mongo --host $mongo_host dh_auth --eval 'db.users.createIndex( { "username": 1 }, { unique: true } )'
