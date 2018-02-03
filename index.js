@@ -97,7 +97,7 @@ function validate_user(key) {
   return new Promise(function (resolve, reject){
     run_mongo("findOne",  {api_key:key}, [], "users", function(user){
       if (user && user.api_key && user.expires > Date.now()) {
-        resolve(user.name);
+        resolve(user.username);
       } else {
         reject({PLACE:3, user:user, key:key});
       }
@@ -116,7 +116,7 @@ app.use("/api", function(req,res){
                   'keyId': NODE_ID,
                   'Signature': sign_req(user_id, req.originalUrl)
               })
-              .then((d) => (res.send(d.body)))
+              .then((d) => (res.send(d.text)))
               .catch((e) => (res.send(e)))
       }
       validate_user(req.header('api_key')).then(forward_get).catch((e)=>(res.send(e)));
