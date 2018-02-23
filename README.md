@@ -1,2 +1,2 @@
-# dh_api_node
-Code for an API Node built on deployment hub
+# ensign gateway
+Scalable API gateway node
